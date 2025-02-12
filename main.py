@@ -5,6 +5,8 @@ import time
 import global_state
 import matplotlib.pyplot as plt
 
+
+# Inicialización de la sesión de Streamlit para guardar la página actual y el estado de la conexión con el broker MQTT 
 def init_session_state():
     if "pagina" not in st.session_state:
         st.session_state.pagina = "Configuración"
@@ -13,6 +15,7 @@ def init_session_state():
         st.session_state.mqtt_client_started = True
         start_mqtt_client()
 
+# Función para obtener los valores de un topic almacenados en el fichero global_state.py 
 def get_values(topic):
     if topic == "temperature":
         return global_state.temperature_values
@@ -23,6 +26,7 @@ def get_values(topic):
     elif topic == "motion":
         return global_state.motion_values
 
+# Función para almacenar los valores recibidos de un topic en el fichero global_state.py
 def set_values(topic, value_received):
     if topic == "temperature":
         global_state.temperature_values.append(value_received)
@@ -33,6 +37,8 @@ def set_values(topic, value_received):
     elif topic == "motion":
         global_state.motion_values.append(value_received)
 
+
+# Función para mostrar un gráfico en Streamlit ya sea de la temperatura, humedad o color
 def show_graph(tittle, values, x_label, y_label):
     fig, ax = plt.subplots()
     ax.plot(values, marker="o", linestyle="-", color="b")
@@ -43,8 +49,10 @@ def show_graph(tittle, values, x_label, y_label):
     st.pyplot(fig)
 
 
+# Función para conectar al broker MQTT y recibir los mensajes de los topics de temperatura, humedad, color y movimiento
 def start_mqtt_client():
     try:
+        # Obtiene los datos de configuración desde el fichero config.txt
         with open("config.txt", "r") as f:
             BROKER = f.readline().strip()
             PORT = int(f.readline().strip())
@@ -90,9 +98,11 @@ def start_mqtt_client():
         st.error("Error al conectar al broker" + str(e))
         st.stop()
 
+# Función para cambiar la página actual en Streamlit
 def on_page_change(pagina):
     st.session_state.pagina = pagina
 
+# Función para mostrar el menú lateral en Streamlit y desplazarse a la página actual
 def show_sidebar():
     st.markdown(
     """
@@ -110,15 +120,20 @@ def show_sidebar():
     st.sidebar.button("Humedad", on_click=on_page_change, args=("Humedad",))
     st.sidebar.button("Color", on_click=on_page_change, args=("Color",))
 
+# Inicialización de la sesión de Streamlit para guardar la página actual y el estado de la conexión con el broker MQTT
 init_session_state()
 st.title("Control de dispositivos IoT")
+
+# Obtención de los valores del motor de agua
 motion_values = get_values("motion")
 print(motion_values)
 if motion_values != []:
+    # Obtención del último valor del motor de agua, en caso de que esté haya devuelto true, activa el motor de agua
     motion = motion_values[-1]
     if motion == b'True':
         st.success("La humedad ha bajado demasiado, se ha activado el motor de agua")
 
+# Página de configuración del broker MQTT
 if st.session_state.pagina == "Configuración":
     st.header("Configuración")
     st.subheader("Configuración del broker")
@@ -126,8 +141,6 @@ if st.session_state.pagina == "Configuración":
     broker = st.text_input("Broker", placeholder="localhost")
     st.text("Puerto del broker")
     puerto = st.text_input("Puerto", placeholder="1883")
-    
-    
     if st.button("Guardar configuración"):
         if not broker:
             st.error("Dirección del broker no puede estar vacía")
@@ -148,17 +161,22 @@ if st.session_state.pagina == "Configuración":
         on_page_change("Monitor")
         st.rerun()
 
+# Página de monitor de los dispositivos IoT
 elif st.session_state.pagina == "Monitor":
     init_session_state()
     show_sidebar()
     st.header("Monitor")
     st.subheader("Monitor de los dispositivos IoT")
     
+# Página de monitor de la temperatura
 elif st.session_state.pagina == "Temperatura":
     show_sidebar()
     st.header("Monitor de temperatura")
+    # Creación de las columnas para mostrar los gráficos de la temperatura
     col1, col2 = st.columns(2)
+    # Bucle infinito de espera de datos de la temperatura y mostrarlos en las columnas
     while True: 
+        # Obtención de los valores de la temperatura a través de la función get_values
         temperature_values = get_values("temperature")
         if temperature_values != []:
             with col1:
@@ -172,17 +190,22 @@ elif st.session_state.pagina == "Temperatura":
                 st.subheader("Promedio de temperatura:")
                 st.text(f"{avg_temperature:.2f} ºC")
             with col2:
+                # Función para mostrar el gráfico de la temperatura
                 show_graph("Temperatura", temperature_values, "Tiempo", "Temperatura")
         else:
             st.text("Esperando datos...")
         time.sleep(5)
         st.rerun()
 
+# Página de monitor de la humedad
 elif st.session_state.pagina == "Humedad":
     show_sidebar()
     st.header("Monitor de humedad")
+    # Creación de las columnas para mostrar los gráficos de la humedad
     col1, col2 = st.columns(2)
+    # Bucle infinito de espera de datos de la humedad y mostrarlos en las columnas
     while True: 
+        # Obtención de los valores de la humedad a través de la función get_values
         humidity_values = get_values("humidity")
         if humidity_values != []:
             with col1:
@@ -196,17 +219,22 @@ elif st.session_state.pagina == "Humedad":
                 st.subheader("Promedio de humedad:")
                 st.text(f"{avg_humidity:.2f} %")   
             with col2:
+                # Función para mostrar el gráfico de la humedad
                 show_graph("Humedad", humidity_values, "Tiempo", "Humedad")
         else:
             st.text("Esperando datos...")
         time.sleep(5)
         st.rerun()
 
+# Página de monitor de color
 elif st.session_state.pagina == "Color":
     show_sidebar()
     st.header("Monitor de color")
+    # Creación de las columnas para mostrar los gráficos de color
     col1, col2 = st.columns(2)
+    # Bucle infinito de espera de datos de color y mostrarlos en las columnas
     while True: 
+        # Obtención de los valores de color a través de la función get_values
         color_values = get_values("color")
         if color_values != []:
             with col1:
@@ -227,6 +255,7 @@ elif st.session_state.pagina == "Color":
                 st.subheader("Color más común:")
                 st.text(most_common_color)
             with col2:
+                # Función para mostrar el gráfico de color
                 show_graph("Color", color_values, "Tiempo", "Color")
         else:
             st.text("Esperando datos...")
