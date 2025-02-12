@@ -1,2 +1,2 @@
-localhost
+test.mosquitto.org
 1883
